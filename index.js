@@ -60,6 +60,25 @@ async function run() {
             res.send(result);
         });
 
+        app.put("/assignments/:id", async (req, res) => {
+            const id = req.params.id;
+            const newDetails = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedArt = {
+                $set: {
+                    title: newDetails.newTitle,
+                    marks: newDetails.newMark,
+                    image: newDetails.newImage,
+                    description: newDetails.newDescription,
+                    startDate: newDetails.newDate,
+                    deficulty: newDetails.newDificult,
+                },
+            };
+            const result = await assignments.updateOne(filter, updatedArt, options);
+            res.send(result);
+        });
+
         app.delete("/assignments/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
