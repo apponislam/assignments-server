@@ -87,6 +87,12 @@ async function run() {
 
         const submittedAssignment = client.db("AssignmentsDB").collection("submittedAssignments");
 
+        app.get("/submitted", async (req, res) => {
+            const cursor = submittedAssignment.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
         app.post("/submitted", async (req, res) => {
             const submitAssign = req.body;
             console.log(submitAssign);
