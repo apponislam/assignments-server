@@ -106,6 +106,22 @@ async function run() {
             res.send(result);
         });
 
+        app.put("/submitted/:id", async (req, res) => {
+            const id = req.params.id;
+            const newMarks = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedArt = {
+                $set: {
+                    yougot: newMarks.yougot,
+                    feedback: newMarks.feedback,
+                    status: newMarks.status,
+                },
+            };
+            const result = await submittedAssignment.updateOne(filter, updatedArt, options);
+            res.send(result);
+        });
+
         app.get("/submitted/status/true", async (req, res) => {
             const query = { status: true };
             const result = await submittedAssignment.find(query).toArray();
