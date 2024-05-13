@@ -51,13 +51,13 @@ async function run() {
             res.send(result);
         });
 
-        app.get("/assignments/email/:email", async (req, res) => {
-            const { email } = req.params;
-            const query = { useremail: email };
-            const cursor = assignments.find(query);
-            const result = await cursor.toArray();
-            res.send(result);
-        });
+        // app.get("/assignments/email/:email", async (req, res) => {
+        //     const { email } = req.params;
+        //     const query = { useremail: email };
+        //     const cursor = assignments.find(query);
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // });
 
         app.put("/assignments/:id", async (req, res) => {
             const id = req.params.id;
@@ -88,7 +88,7 @@ async function run() {
         const submittedAssignment = client.db("AssignmentsDB").collection("submittedAssignments");
 
         app.get("/submitted", async (req, res) => {
-            console.log(req.query);
+            console.log(req.query.status);
             let query = {};
             if (req.query.email) {
                 query = { examineeEmail: req.query.email };
@@ -97,16 +97,26 @@ async function run() {
             res.send(result);
         });
 
-        // app.get("/submitted", async (req, res) => {
-        //     const email = req.query.email;
-        //     console.log(email);
-        //     const query = {};
-        //     if (req.query.email) {
-        //         query = { examineeEmail: req.query.email };
-        //     }
-        //     const result = await submittedAssignment.find(query).toArray();
-        //     res.send(result);
-        // });
+        app.get("/submitted/:id", async (req, res) => {
+            const id = req.params.id;
+            const result = await submittedAssignment.findOne({ _id: new ObjectId(id) });
+            if (!result) {
+                return res.send("Document not found");
+            }
+            res.send(result);
+        });
+
+        app.get("/submitted/status/true", async (req, res) => {
+            const query = { status: true };
+            const result = await submittedAssignment.find(query).toArray();
+            res.send(result);
+        });
+
+        app.get("/submitted/status/false", async (req, res) => {
+            const query = { status: false };
+            const result = await submittedAssignment.find(query).toArray();
+            res.send(result);
+        });
 
         app.post("/submitted", async (req, res) => {
             const submitAssign = req.body;
