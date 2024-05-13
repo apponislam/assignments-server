@@ -1,12 +1,21 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 require("dotenv").config();
 
 const port = process.env.PORT || 5000;
-app.use(cors());
+app.use(
+    cors({
+        origin: ["http://localhost:5173"],
+        credentials: true,
+    })
+);
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", function (req, res) {
     res.send("Assignment server is running");
@@ -23,14 +32,51 @@ const client = new MongoClient(uri, {
     },
 });
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
+
+const logger = async (req, res, next) => {
+    console.log("called", req.host, req.originalUrl);
+    next();
+};
+
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies?.token;
+    if (!token) {
+        res.status(401).send({ message: "Unauthorized" });
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            res.status(401).send({ message: "Token Expired" });
+        }
+        console.log(decoded);
+        req.user = decoded;
+        next();
+    });
+};
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+        // JWT Token Generate
+
+        app.post("/jwt", logger, async (req, res) => {
+            const user = req.body;
+            console.log("user for token", user);
+            // const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1hr" });
+            // res.send(token);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+            res.cookie("token", token, cookieOptions).send({ success: true });
+        });
+
         const assignments = client.db("AssignmentsDB").collection("assignments");
 
-        app.get("/assignments", async (req, res) => {
+        app.get("/assignments", logger, async (req, res) => {
             const cursor = assignments.find();
             const result = await cursor.toArray();
             res.send(result);
@@ -85,10 +131,16 @@ async function run() {
             res.send(result);
         });
 
+        // Submitted Assignments
+
         const submittedAssignment = client.db("AssignmentsDB").collection("submittedAssignments");
 
-        app.get("/submitted", async (req, res) => {
-            console.log(req.query.status);
+        app.get("/submitted", logger, verifyToken, async (req, res) => {
+            console.log("Valid User", req.user);
+            console.log(req.query.email, req.user.email);
+            // if (req.query.email !== req.user.email) {
+            //     res.status(403).send({ message: "Forbidden Access" });
+            // }
             let query = {};
             if (req.query.email) {
                 query = { examineeEmail: req.query.email };
