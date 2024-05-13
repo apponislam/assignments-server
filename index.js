@@ -88,10 +88,25 @@ async function run() {
         const submittedAssignment = client.db("AssignmentsDB").collection("submittedAssignments");
 
         app.get("/submitted", async (req, res) => {
-            const cursor = submittedAssignment.find();
-            const result = await cursor.toArray();
+            console.log(req.query);
+            let query = {};
+            if (req.query.email) {
+                query = { examineeEmail: req.query.email };
+            }
+            const result = await submittedAssignment.find(query).toArray();
             res.send(result);
         });
+
+        // app.get("/submitted", async (req, res) => {
+        //     const email = req.query.email;
+        //     console.log(email);
+        //     const query = {};
+        //     if (req.query.email) {
+        //         query = { examineeEmail: req.query.email };
+        //     }
+        //     const result = await submittedAssignment.find(query).toArray();
+        //     res.send(result);
+        // });
 
         app.post("/submitted", async (req, res) => {
             const submitAssign = req.body;
