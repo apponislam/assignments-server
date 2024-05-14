@@ -9,7 +9,7 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 app.use(
     cors({
-        origin: ["http://localhost:5173", "https://assignmentb9a11.web.app"],
+        origin: ["http://localhost:5173", "https://assignmentb9a11.web.app", "https://assignmentb9a11.firebaseapp.com"],
         credentials: true,
     })
 );
@@ -35,6 +35,7 @@ const client = new MongoClient(uri, {
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    // sameSite: "none",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
 };
 
@@ -46,11 +47,11 @@ const logger = async (req, res, next) => {
 const verifyToken = async (req, res, next) => {
     const token = req.cookies?.token;
     if (!token) {
-        res.status(401).send({ message: "Unauthorized" });
+        return res.status(401).send({ message: "Unauthorized Access No Token" });
     }
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-            res.status(401).send({ message: "Token Expired" });
+            return res.status(401).send({ message: "Token Expired" });
         }
         console.log(decoded);
         req.user = decoded;
@@ -61,7 +62,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         // JWT Token Generate
 
@@ -76,7 +77,7 @@ async function run() {
 
         const assignments = client.db("AssignmentsDB").collection("assignments");
 
-        app.get("/assignments", logger, async (req, res) => {
+        app.get("/assignments", async (req, res) => {
             const cursor = assignments.find();
             const result = await cursor.toArray();
             res.send(result);
@@ -138,9 +139,9 @@ async function run() {
         app.get("/submitted", logger, verifyToken, async (req, res) => {
             console.log("Valid User", req.user);
             console.log(req.query.email, req.user.email);
-            // if (req.query.email !== req.user.email) {
-            //     res.status(403).send({ message: "Forbidden Access" });
-            // }
+            if (req.query.email !== req.user.email) {
+                return res.status(403).send({ message: "Forbidden Access" });
+            }
             let query = {};
             if (req.query.email) {
                 query = { examineeEmail: req.query.email };
@@ -194,8 +195,8 @@ async function run() {
         });
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
